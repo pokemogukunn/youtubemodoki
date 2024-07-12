@@ -1,55 +1,373 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Channel Videos</title>
+    <title>クッキークリッカー</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 1s;
+        }
+        .top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f4f4f4;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        .top-bar div {
+            flex: 1;
+            text-align: center;
+        }
+        .left-section, .right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 80px;
+        }
+        .right-section {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+        }
+        .clicker-icon {
+            font-size: 128px;
+            display: inline-block;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .clicker-icon:hover {
+            opacity: 0.8;
+        }
+        #cheatMessage, #antiCheatMessage {
+            color: red;
+            font-size: 24px;
+            display: none;
+        }
+        .gacha-button {
+            margin: 10px;
+        }
+        #saveCodeDisplay {
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .shop-item {
+            margin: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .shop-item .icon {
+            font-size: 64px;
+        }
+        #cheatOptions {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            padding: 20px;
+            border: 2px solid #000;
+            border-radius: 10px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+        #cheatOptions input {
+            margin: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>YouTube Channel Videos</h1>
-    <ul id="video-list"></ul>
-
+<div class="top-bar">
+    <div>
+        <input type="text" id="shopNameInput" placeholder="クッキー屋さんの名前を入力" oninput="updateShopName()" />
+        <button onclick="randomizeShopName()">ランダムに選ぶ</button>
+    </div>
+    <div>
+        <p id="xpCounter">経験値: 0</p>
+        <p id="cheatMessage">チート発動</p>
+        <p id="antiCheatMessage">チート解除</p>
+    </div>
+    <div>
+        <button id="saveButton" onclick="saveGame()">セーブ</button>
+        <button id="loadButton" onclick="showLoadPrompt()">セーブデータ読み込み</button>
+    </div>
+</div><br>
+<div class="left-section">
+<br>
+    <p id="cookieCounter">クッキー: 0</p>
+    <div id="clicker"><span class="clicker-icon" onclick="clickCookie()">🍪</span></div>
+<br>
+    <p id="cps">クッキー/秒: 0</p>
+</div>
+<div class="right-section">
+    <!-- 商品リストの生成 -->
     <script>
-        const API_KEY = 'AIzaSyA_RpiaJd_peLqI8a6mWiktRG1AE7sunYU';
-        const CHANNEL_ID = 'UCqHkQwDjkEj4VjAP0gyxzOQ';
-        const YOUTUBE_DL_SERVER = 'http://localhost:8080'; // youtube-dl-serverのURLを指定
+        const shopItems = [
+            {id: 'cursor', name: 'カーソル', icon: '👆', price: 15, cps: 1},
+            {id: 'granny', name: 'おばあちゃん', icon: '👵', price: 100, cps: 10},
+            {id: 'farm', name: '農場', icon: '🌾', price: 1100, cps: 100},
+            {id: 'mine', name: '鉱山', icon: '⛏️', price: 12000, cps: 200},
+            {id: 'factory', name: '工場', icon: '🏭', price: 130000, cps: 1000},
+            {id: 'temple', name: '神殿', icon: '⛩️', price: 2000000, cps: 10000},
+            {id: 'tower', name: '魔法の塔', icon: '🏰', price: 33000000, cps: 50000},
+            {id: 'ship', name: '貨物船', icon: '🚢', price: 510000000, cps: 100000},
+            {id: 'lab', name: '研究所', icon: '🔬', price: 7500000000, cps: 500000},
+            {id: 'portal', name: 'ポータル', icon: '🌀', price: 100000000000, cps: 1000000},
+            {id: 'timeMachine', name: 'タイムマシン', icon: '⏰', price: 1400000000000, cps: 10000000},
+            {id: 'antimatterCondenser', name: '反物質凝縮器', icon: '⚛️', price: 17000000000000, cps: 100000000},
+            {id: 'prism', name: 'プリズム', icon: '🔮', price: 210000000000000, cps: 1000000000},
+            {id: 'chancemaker', name: 'チャンスメイカー', icon: '🎲', price: 2600000000000000, cps: 10000000000},
+            {id: 'fractalEngine', name: 'フラクタルエンジン', icon: '🧬', price: 31000000000000000, cps: 100000000000},
+            {id: 'javascriptConsole', name: 'JavaScriptコンソール', icon: '💻', price: 710000000000000000, cps: 500000000000},
+            {id: 'idleverse', name: 'アイドルバース', icon: '🌌', price: 12000000000000000000, cps: 1000000000000},
+            {id: 'goldenSwitch', name: 'ゴールデンスイッチ', icon: '🔆', price: 500000000000000000000, cps: 5000000000000},
+            {id: 'hackerSpace', name: 'ハッカースペース', icon: '🤖', price: 9000000000000000000000, cps: 10000000000000},
+            {id: 'cookieComet', name: 'クッキー彗星', icon: '🌠', price: 150000000000000000000000, cps: 50000000000000},
+            {id: 'nebula', name: '星雲', icon: '☁️', price: 3000000000000000000000000, cps: 100000000000000},
+            {id: 'quantumComputer', name: '量子コンピュータ', icon: '🖥️', price: 60000000000000000000000000, cps: 500000000000000},
+            {id: 'singularity', name: 'シンギュラリティ', icon: '🌌', price: 1000000000000000000000000000, cps: 1000000000000000},
+            {id: 'alienFactory', name: 'エイリアン工場', icon: '👽', price: 15000000000000000000000000000, cps: 5000000000000000},
+            {id: 'warpDrive', name: 'ワープドライブ', icon: '🚀', price: 300000000000000000000000000000, cps: 10000000000000000},
+            {id: 'galacticEmpire', name: '銀河帝国', icon: '👾', price: 6000000000000000000000000000000, cps: 50000000000000000},
+            {id: 'universe', name: 'ユニバース', icon: '🌌', price: 120000000000000000000000000000000, cps: 100000000000000000},
+            {id: 'multiverse', name: 'マルチバース', icon: '🌠', price: 2400000000000000000000000000000000, cps: 500000000000000000},
+            {id: 'omniverse', name: 'オムニバース', icon: '🌌', price: 48000000000000000000000000000000000, cps: 1000000000000000000}
+        ];
 
-        async function fetchVideos() {
-            try {
-                const response = await fetch(`https://www.googleapis.com/youtube/v3/search?key=${API_KEY}&channelId=${CHANNEL_ID}&part=snippet,id&order=date&maxResults=20`);
-                const data = await response.json();
-                const videos = data.items;
-
-                const videoList = document.getElementById('video-list');
-                for (const video of videos) {
-                    const videoId = video.id.videoId;
-                    const videoItem = document.createElement('li');
-                    videoItem.innerHTML = `
-                        <h3>${video.snippet.title}</h3>
-                        <p>${video.snippet.description}</p>
-                        <img src="${video.snippet.thumbnails.default.url}" alt="${video.snippet.title}" id="thumbnail-${videoId}">
-                    `;
-                    videoList.appendChild(videoItem);
-
-                    // サムネイル画像クリック時のイベントリスナーを追加
-                    document.getElementById(`thumbnail-${videoId}`).addEventListener('click', async () => {
-                        const dlResponse = await fetch(`${YOUTUBE_DL_SERVER}/download?url=https://www.youtube.com/watch?v=${videoId}`);
-                        const dlData = await dlResponse.json();
-                        const downloadUrl = dlData.url;
-
-                        // 動画ストリームURLを開くか、mp4として保存
-                        const a = document.createElement('a');
-                        a.href = downloadUrl;
-                        a.download = `${video.snippet.title}.mp4`; // ファイル名を設定
-                        a.click();
-                    });
-                }
-            } catch (error) {
-                console.error('Error fetching videos:', error);
-            }
-        }
-
-        fetchVideos();
+        let shopItemsHtml = '';
+        shopItems.forEach(item => {
+            shopItemsHtml += `
+                <div id="${item.id}" class="shop-item">
+                    <span class="icon" onclick="buyItem('${item.id}')">${item.icon}</span>
+                    <button onclick="buyItem('${item.id}')">${item.name}を購入 (${item.price}クッキー)</button>
+                    <button onclick="sellItem('${item.id}')">${item.name}を売却 (${Math.floor(item.price / 2)}クッキー)</button>
+                </div>`;
+        });
+        document.write(shopItemsHtml);
     </script>
+</div>
+<div class="bottom-section">
+    <div>
+        <button id="gachaNormalButton" class="gacha-button" onclick="rollGacha('normal')">ノーマルガチャ (10クッキー)</button>
+        <button id="gachaRareButton" class="gacha-button" onclick="rollGacha('rare')">レアガチャ (100クッキー)</button>
+        <button id="gachaEpicButton" class="gacha-button" onclick="rollGacha('epic')">エピックガチャ (1,000クッキー)</button>
+    </div>
+    <div>
+        <h2>エンチャント</h2>
+        <button class="enchant-button" onclick="enchant()">エンチャント (150クッキー)</button>
+    </div>
+</div>
+<div>
+    <h2>実績</h2>
+    <ul id="achievements"></ul>
+</div>
+<div id="loadPrompt" style="display:none;">
+    <input type="text" id="saveCodeInput" placeholder="セーブコードを入力" />
+    <button id="loadGameButton" onclick="loadGame()">読み込み</button>
+    <button id="closeButton" onclick="hideLoadPrompt()">閉じる</button>
+</div>
+<div id="saveCodeDisplay"></div>
+<div id="cheatOptions">
+    <label for="cheatCookies">クッキー数:</label>
+    <input type="number" id="cheatCookies" min="0" />
+    <label for="cheatXp">経験値:</label>
+    <input type="number" id="cheatXp" min="0" />
+    <button onclick="applyCheats()">適用</button>
+</div>
+<!-- チートトグルボタン -->
+<button id="cheatToggleButton" onclick="toggleCheatMode()">入力ミス</button>
+
+<script>
+    var cookieCount = 0;
+    var items = {};
+    shopItems.forEach(item => {
+        items[item.id] = {count: 0, cps: item.cps, price: item.price};
+    });
+    var cps = 0;
+    var xp = 0;
+    var cheatMode = false;
+    var hasUsedCheat = false;
+
+    var cookieCounter = document.getElementById('cookieCounter');
+    var cpsCounter = document.getElementById('cps');
+    var xpCounter = document.getElementById('xpCounter');
+    var shopNameElement = document.getElementById('shopName');
+    var cheatMessage = document.getElementById('cheatMessage');
+    var antiCheatMessage = document.getElementById('antiCheatMessage');
+    var shopNameInput = document.getElementById('shopNameInput');
+    var loadPrompt = document.getElementById('loadPrompt');
+    var saveCodeInput = document.getElementById('saveCodeInput');
+    var saveCodeDisplay = document.getElementById('saveCodeDisplay');
+    var achievementsList = document.getElementById('achievements');
+    var cheatOptions = document.getElementById('cheatOptions');
+
+    // チートトグル用の関数
+    function toggleCheatMode() {
+        cheatMode = !cheatMode;
+        cheatOptions.style.display = cheatMode ? 'flex' : 'none';
+        cheatMessage.style.display = cheatMode ? 'block' : 'none';
+        antiCheatMessage.style.display = cheatMode ? 'none' : 'block';
+    }
+
+    // チートを適用する関数
+    function applyCheats() {
+        var cheatCookiesInput = document.getElementById('cheatCookies');
+        var cheatXpInput = document.getElementById('cheatXp');
+
+        if (cheatCookiesInput.value !== '') {
+            cookieCount = parseInt(cheatCookiesInput.value);
+            updateCookieCounter();
+        }
+        if (cheatXpInput.value !== '') {
+            xp = parseInt(cheatXpInput.value);
+            updateXpCounter();
+        }
+    }
+
+    // クッキーをクリックする関数
+    function clickCookie() {
+        cookieCount++;
+        updateCookieCounter();
+    }
+
+    // 経験値を更新する関数
+    function updateXpCounter() {
+        xpCounter.textContent = '経験値: ' + xp;
+    }
+
+    // クッキーのカウンターを更新する関数
+    function updateCookieCounter() {
+        cookieCounter.textContent = 'クッキー: ' + cookieCount;
+    }
+
+    // 経験値を追加する関数
+    function addXp(amount) {
+        xp += amount;
+        updateXpCounter();
+    }
+
+    // セーブ機能
+    function saveGame() {
+        var saveData = {
+            cookieCount: cookieCount,
+            items: items,
+            cps: cps,
+            xp: xp
+        };
+        var saveCode = btoa(JSON.stringify(saveData));
+        saveCodeDisplay.textContent = 'セーブコード: ' + saveCode;
+    }
+
+    // セーブデータをロードするプロンプトを表示する関数
+    function showLoadPrompt() {
+        loadPrompt.style.display = 'block';
+    }
+
+    // セーブデータをロードするプロンプトを隠す関数
+    function hideLoadPrompt() {
+        loadPrompt.style.display = 'none';
+    }
+
+    // セーブデータを読み込む関数
+    function loadGame() {
+        var saveCode = saveCodeInput.value;
+        try {
+            var saveData = JSON.parse(atob(saveCode));
+            cookieCount = saveData.cookieCount;
+            items = saveData.items;
+            cps = saveData.cps;
+            xp = saveData.xp;
+            updateCookieCounter();
+            updateXpCounter();
+            updateCps();
+            hideLoadPrompt();
+        } catch (e) {
+            alert('セーブデータが無効です');
+        }
+    }
+
+    // 商品を購入する関数
+    function buyItem(id) {
+        if (cookieCount >= items[id].price) {
+            cookieCount -= items[id].price;
+            items[id].count++;
+            items[id].price = Math.floor(items[id].price * 1.15);
+            updateCookieCounter();
+            updateCps();
+        }
+    }
+
+    // 商品を売却する関数
+    function sellItem(id) {
+        if (items[id].count > 0) {
+            items[id].count--;
+            cookieCount += Math.floor(items[id].price / 2);
+            items[id].price = Math.floor(items[id].price / 1.15);
+            updateCookieCounter();
+            updateCps();
+        }
+    }
+
+    // クッキー/秒を更新する関数
+    function updateCps() {
+        cps = 0;
+        for (let id in items) {
+            cps += items[id].count * items[id].cps;
+        }
+        cpsCounter.textContent = 'クッキー/秒: ' + cps;
+    }
+
+    // 実績を解除する関数
+    function unlockAchievement(name) {
+        var li = document.createElement('li');
+        li.textContent = name;
+        achievementsList.appendChild(li);
+        addXp(10);
+    }
+
+    // 店舗名を更新する関数
+    function updateShopName() {
+        var shopName = shopNameInput.value;
+        shopNameElement.textContent = shopName || 'クッキー屋さん';
+    }
+
+    // 店舗名をランダムに選ぶ関数
+    function randomizeShopName() {
+        var shopNames = ['おいしいクッキー', '幸せのクッキー', '夢のクッキー', '魔法のクッキー'];
+        var randomName = shopNames[Math.floor(Math.random() * shopNames.length)];
+        shopNameInput.value = randomName;
+        updateShopName();
+    }
+
+    // 1秒ごとにクッキーを増加させる
+    setInterval(function() {
+        cookieCount += cps;
+        updateCookieCounter();
+    }, 1000);
+</script>
+<script>
+    window.onload = function() {
+        var password = prompt("8閲覧パスワード5を1入力7してください5:");
+        if (password === "85175") {
+            content.style.display = "block";
+        } else {
+            alert("パスワードが間違っています");
+            content.style.display = "none";
+        }
+    };
+</script>
 </body>
 </html>
